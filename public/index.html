@@ -6,6 +6,8 @@ html,body {
     background-color: #202020;
     color: #bbb600;
     font-family: monospace;
+    font-size: 1.05em;
+    line-height: 1.4em;
     margin: 5px;
 }
 .emph {
@@ -92,11 +94,15 @@ a:hover {
     }
 
     function nodelink(key) {
-        return "<a target=\"_blank\" href=\"https://www.robtex.com/lightning/node/" + key + "\">" + key + "</a>";
+        return "<a target=\"_blank\" href=\"https://www.robtex.com/lightning/node/" + key + "\">" + shorten(key) + "</a>";
     }
 
     function esc(text) {
         return $('<div/>').text(text).html();
+    }
+
+    function shorten(text) {
+        return text.substring(0,7) + "…";
     }
 
     function connect() {
@@ -140,7 +146,7 @@ a:hover {
                 if (Object.keys(oldchannel).length == 0) {
                     // channel opened
                     var txid = newchannel.chan_point.substring(0,64);
-                    add_message(obj.time, "<span class=\"emph\">" + esc(newchannel.capacity) + "</span> sat channel <span class=\"emph\">announced</span> between " + nodelink(esc(newchannel.node1_pub)) + " (<span class=\"emph\">" + esc(newchannel.node1.alias) + "</span>) and " + nodelink(esc(newchannel.node2_pub)) + " (<span class=\"emph\">" + esc(newchannel.node2.alias) + "</span>), funded with txid <a target=\"_blank\" href=\"https://blockchain.info/tx/" + esc(txid) + "\">" + esc(txid) + "</a>");
+                    add_message(obj.time, "<span class=\"emph\">" + esc(newchannel.capacity) + "</span> sat channel <span class=\"emph\">announced</span> between " + nodelink(esc(newchannel.node1_pub)) + " (<span class=\"emph\">" + esc(newchannel.node1.alias) + "</span>) and " + nodelink(esc(newchannel.node2_pub)) + " (<span class=\"emph\">" + esc(newchannel.node2.alias) + "</span>), funded with txid <a target=\"_blank\" href=\"https://blockchain.info/tx/" + esc(txid) + "\">" + shorten(esc(txid)) + "</a>");
                 } else if (Object.keys(newchannel).length == 0) {
                     // channel closed
                     add_message(obj.time, "<span class=\"emph\">" + esc(oldchannel.capacity) + "</span> sat channel <span class=\"emph\">disappeared</span> between " + nodelink(esc(oldchannel.node1_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node1.alias) + "</span>) and " + nodelink(esc(oldchannel.node2_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node2.alias) + "</span>)");
