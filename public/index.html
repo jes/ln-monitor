@@ -25,7 +25,7 @@ hr {
     border-top: 1px solid rgba(255,255,0,.1);
 }
 #links {
-    margin-top: 10px;
+    float: left;
 }
 a {
     color: #bbb600;
@@ -37,9 +37,9 @@ a:hover {
 <title>⚡ Lightning Network Monitor ⚡</title>
 </head>
 <body>
-<div style="float:left; margin-right: 30px">
+<div style="float:left; margin-right: 30px; margin-top: 10px">
 <h1>⚡ Lightning Network Monitor ⚡</h1>
-<div id="status"><span class="subdue" id="time">Awaiting data</span>: <span class="emph" id="totalnodes">0</span> nodes, <span class="emph" id="totalchannels">0</span> channels, <span class="emph" id="totalcapacity">0</span> BTC total capacity</div>
+<div id="status"><span class="subdue" id="time">Awaiting data</span>: <span class="emph" id="totalnodes">0</span> nodes, <span class="emph" id="totalchannels">0</span> channels, <span class="emph" id="totalcapacity">0</span> BTC total capacity, <span class="emph" id="largestchannel">0</span> BTC largest channel</div>
 </div>
 <div id="links">
 <div><a href="https://incoherency.co.uk/">James Stanley</a> - <a href="mailto:jes@jes.xxx">jes@jes.xxx</a></div>
@@ -116,6 +116,7 @@ a:hover {
             $('#totalnodes').text(obj.totalnodes);
             $('#totalchannels').text(obj.totalchannels);
             $('#totalcapacity').text(obj.totalcapacity/100000000);
+            $('#largestchannel').text(obj.largestchannel/100000000);
 
             if (obj.type == 'node') {
                 var newnode = obj["new"];
@@ -154,6 +155,8 @@ a:hover {
                     // what else could change?
                     console.log(e.data);
                 }
+            } else if (obj.type == 'block') {
+                add_message(obj.time, "block <span class=\"emph\">" + esc(obj["new"].block) + "</span> was mined");
             }
         };
         ws.onopen = function() {

@@ -64,6 +64,11 @@ sub update_state {
     $newstate->{id} = $oldstate->{id};
     $newstate->{lastevents} = $oldstate->{lastevents}||[];
 
+    $newstate->{latestblock} = latest_block();
+    if ($json->encode($newstate->{latestblock}) ne $json->encode($oldstate->{latestblock}||{})) {
+        push @events, {time=>time,type=>"block",old=>$oldstate->{latestblock},new=>$newstate->{latestblock}};
+    }
+
     my %allnodes = map { $_ => 1 } (keys %{ $oldstate->{nodes} }, keys %{ $newstate->{nodes} });
 
     my $totalnodes = keys %allnodes;
@@ -83,12 +88,17 @@ sub update_state {
 
     my $totalchannels = keys %allchannels;
     my $totalcapacity = 0;
+    my $largestchannel = 0;
 
     for my $channel (keys %allchannels) {
         my $old = $oldstate->{channels}{$channel}||{};
         my $new = $newstate->{channels}{$channel}||{};
 
         $totalcapacity += $new->{capacity};
+
+        if ($new->{capacity} > $largestchannel) {
+            $largestchannel = $new->{capacity};
+        }
 
         if ($old->{node1_pub}) {
             $old->{node1} = $newstate->{nodes}{$old->{node1_pub}};
@@ -110,6 +120,7 @@ sub update_state {
         $e->{totalnodes} = $totalnodes;
         $e->{totalchannels} = $totalchannels;
         $e->{totalcapacity} = $totalcapacity;
+        $e->{largestchannel} = $largestchannel;
         push @{ $newstate->{lastevents} }, $e;
         broadcast($e);
     }
@@ -121,6 +132,12 @@ sub update_state {
     # XXX: why don't we have to decode_utf8 when reading in?
     print $fh encode_utf8($json->encode($newstate));
     close $fh;
+}
+
+sub latest_block {
+    my $json = `bitcoin-cli getblockchaininfo`;
+    my $o = decode_json($json);
+    return {block => $o->{headers}};
 }
 
 sub process_state {
