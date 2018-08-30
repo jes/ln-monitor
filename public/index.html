@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+<title>LN Monitor</title>
+</head>
+<body>
+<h1>LN Monitor</h1>
+<div id="curtime"><span id="time"></span>: <span id="totalnodes">0</span> nodes; <span id="totalchannels">0</span> channels; <span id="totalcapacity">0</span> BTC total capacity</div>
+<div><a href="https://bitcoinvisuals.com/lightning">Bitcoin Visuals Lightning Network Charts</a></div>
+<div><a href="https://www.robtex.com/lightning/">Robtex Bitcoin Lightning</a></div>
+<br>
+<div id="msgs"></div>
+
+<script src="jquery-3.3.1.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    var lastseenid = 0;
+
+    function pad(x, N) {
+        var s = x + "";
+        while (s.length < N) {
+            s = "0" + s;
+        }
+        return s;
+    }
+
+    function strdate(t) {
+        return (t.getYear()+1900) + "-" + pad((t.getMonth()+1),2) + "-" + pad(t.getDate(),2) + " " + pad(t.getHours(),2) + ":" + pad(t.getMinutes(),2) + ":" + pad(t.getSeconds(),2);
+    }
+
+    function add_message(time, text) {
+        var t = new Date(time*1000);
+        // TODO: html escape text
+        $('#msgs').html(strdate(t) + ": " + text + "<br>" + $('#msgs').html());
+    }
+
+    function node_addr(n) {
+        var addrs = n.addresses;
+        if (addrs.length == 0) {
+            return 'unknown address';
+        }
+        var s = '';
+        for (var i = 0; i < addrs.length; i++) {
+            if (addrs[i].network == 'tcp') {
+                s += addrs[i].addr;
+            } else {
+                s += "unknown address";
+            }
+            if (i < addrs.length-2) {
+                s += ", ";
+            } else if (i == addrs.length-2) {
+                s += " and ";
+            }
+        }
+        return s;
+    }
+
+    function connect() {
+        var ws = new WebSocket((window.location.protocol == 'http:' ? "ws://" : "wss://") + window.location.hostname + ":" + window.location.port + "/events");
+        ws.onmessage = function(e) {
+            var obj = JSON.parse(e.data);
+            if (obj.id <= lastseenid)
+                return;
+            lastseenid = obj.id;
+
+            $('#totalnodes').text(obj.totalnodes);
+            $('#totalchannels').text(obj.totalchannels);
+            $('#totalcapacity').text(obj.totalcapacity/100000000);
+
+            if (obj.type == 'node') {
+                var newnode = obj["new"];
+                var oldnode = obj["old"];
+
+                if (Object.keys(oldnode).length == 0) {
+                    // node came online
+                    add_message(obj.time, "node " + newnode.pub_key + " (" + newnode.alias + ") came online at " + node_addr(newnode));
+                } else if (Object.keys(newnode).length == 0) {
+                    // node went offline
+                    add_message(obj.time, "node " + oldnode.pub_key + " (" + oldnode.alias + ") went offline at " + node_addr(oldnode));
+                } else {
+                    if (oldnode.alias != newnode.alias) {
+                        // alias changed
+                        add_message(obj.time, "node " + oldnode.pub_key + " renamed from '" + oldnode.alias + "' to '" + newnode.alias + "' at " + node_addr(newnode));
+                    } else if (node_addr(oldnode) != node_addr(newnode)) {
+                        // addresses changed
+                        add_message(obj.time, "node " + oldnode.pub_key + " stopped announcing " + node_addr(oldnode) + " and started announcing " + node_addr(newnode));
+                    } else {
+                        // what else could change?
+                        add_message(obj.time, e.data);
+                    }
+                }
+            } else if (obj.type == 'channel') {
+                var newchannel = obj["new"];
+                var oldchannel = obj["old"];
+
+                if (Object.keys(oldchannel).length == 0) {
+                    // channel opened
+                    add_message(obj.time, newchannel.capacity + " sat channel announced between " + newchannel.node1_pub + " (" + newchannel.node1.alias + ") and " + newchannel.node2_pub + " (" + newchannel.node2.alias + "), funded with txid " + newchannel.chan_point.substring(0,64));
+                } else if (Object.keys(newchannel).length == 0) {
+                    // channel closed
+                    add_message(obj.time, old.capacity + " sat channel disappeared between " + oldchannel.node1_pub + " (" + oldchannel.node1.alias + ") and " + newchannel.node2_pub + " (" + oldchannel.node2.alias + ")");
+                } else {
+                    // what else could change?
+                    console.log(e.data);
+                }
+            }
+        };
+        ws.onopen = function() {
+            console.log("connected");
+        };
+        ws.onclose = function() {
+            console.log("disconnected");
+            // try to reconnect in 1 second
+            window.setTimeout(connect, 1000);
+        };
+    }
+    connect();
+
+    $('#time').text(strdate(new Date()));
+    window.setInterval(function() {
+        $('#time').text(strdate(new Date()));
+    }, 1000);
+</script>
+
+</body>
+</html>

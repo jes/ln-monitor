@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Mojolicious::Lite;
+use Encode;
+use JSON::XS qw(decode_json encode_json);
+
+my $json = JSON::XS->new;
+$json->canonical(1);
+
+my $oldstate;
+if (-f 'ln-monitor-state.json') {
+    open (my $fh, '<', 'ln-monitor-state.json')
+        or die "can't read ln-monitor-state.json: $!";
+    $oldstate = decode_json(join('', <$fh>));
+    close $fh;
+} else {
+    $oldstate = process_state(scalar `lncli describegraph`);
+}
+
+$oldstate->{id} ||= 0;
+
+my @ws_clients;
+
+get '/' => sub {
+    return shift->render('index');
+};
+
+websocket '/events' => sub {
+    my $self = shift;
+
+    $self->inactivity_timeout(600);
+
+    for my $e (@{ $oldstate->{lastevents} }) {
+        $self->send($json->encode($e));
+    }
+
+    push @ws_clients, $self;
+
+    $self->on(finish => sub {
+        @ws_clients = grep { $_ != $self } @ws_clients;
+    });
+};
+
+Mojo::IOLoop->recurring(1 => sub {
+    update_state();
+});
+
+# XXX: not thread-safe, only run 1 worker
+app->start;
+
+sub broadcast {
+    my ($e) = @_;
+
+    for my $c (@ws_clients) {
+        $c->send($json->encode($e));
+    }
+}
+
+sub update_state {
+    my $newstate = process_state(scalar `lncli describegraph`);
+    $newstate->{id} = $oldstate->{id};
+    $newstate->{lastevents} = $oldstate->{lastevents}||[];
+
+    my %allnodes = map { $_ => 1 } (keys %{ $oldstate->{nodes} }, keys %{ $newstate->{nodes} });
+
+    my $totalnodes = keys %allnodes;
+
+    my @events;
+
+    for my $node (keys %allnodes) {
+        my $old = $oldstate->{nodes}{$node}||{};
+        my $new = $newstate->{nodes}{$node}||{};
+
+        if ($json->encode($old) ne $json->encode($new)) {
+            push @events, {time=>time,type=>"node",old=>$old,new=>$new};
+        }
+    }
+
+    my %allchannels = map { $_ => 1 } (keys %{ $oldstate->{channels} }, keys %{ $newstate->{channels} });
+
+    my $totalchannels = keys %allchannels;
+    my $totalcapacity = 0;
+
+    for my $channel (keys %allchannels) {
+        my $old = $oldstate->{channels}{$channel}||{};
+        my $new = $newstate->{channels}{$channel}||{};
+
+        $totalcapacity += $new->{capacity};
+
+        if ($old->{node1_pub}) {
+            $old->{node1} = $newstate->{nodes}{$old->{node1_pub}};
+            $old->{node2} = $newstate->{nodes}{$old->{node2_pub}};
+        }
+        if ($new->{node1_pub}) {
+            $new->{node1} = $newstate->{nodes}{$new->{node1_pub}};
+            $new->{node2} = $newstate->{nodes}{$new->{node2_pub}};
+        }
+
+        if ($json->encode($old) ne $json->encode($new)) {
+            push @events, {time=>time,type=>"channel",old=>$old,new=>$new};
+        }
+    }
+
+    for my $e (@events) {
+        $newstate->{id}++;
+        $e->{id} = $newstate->{id};
+        $e->{totalnodes} = $totalnodes;
+        $e->{totalchannels} = $totalchannels;
+        $e->{totalcapacity} = $totalcapacity;
+        push @{ $newstate->{lastevents} }, $e;
+        broadcast($e);
+    }
+    shift @{ $newstate->{lastevents} } while @{ $newstate->{lastevents} } > 500;
+
+    $oldstate = $newstate;
+    open (my $fh, '>', 'ln-monitor-state.json')
+        or die "can't write ln-monitor-state.json: $!";
+    # XXX: why don't we have to decode_utf8 when reading in?
+    print $fh encode_utf8($json->encode($newstate));
+    close $fh;
+}
+
+sub process_state {
+    my ($json) = @_;
+
+    my $nodes;
+    my $channels;
+
+    my $o = decode_json($json);
+    for my $node (@{ $o->{nodes} }) {
+        $node->{last_update} = 'xxx';
+        if ($node->{addresses}) {
+            $node->{str_addr} = $node->{addresses}[0]{addr} || '???';
+        } else {
+            $node->{str_addr} = '???';
+        }
+        $nodes->{$node->{pub_key}} = $node;
+    }
+
+    for my $channel (@{ $o->{edges} }) {
+        $channel->{last_update} = 'xxx';
+        $channel->{node1_policy}{disabled} = 'xxx';
+        $channel->{node2_policy}{disabled} = 'xxx';
+        $channels->{$channel->{channel_id}} = $channel;
+    }
+
+    return {nodes => $nodes, channels => $channels};
+}
