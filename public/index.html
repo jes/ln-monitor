@@ -3,8 +3,8 @@
 <head>
 <style type="text/css">
 html,body {
-    background-color: #161225;
-    color: #cbc600;
+    background-color: #202020;
+    color: #bbb600;
     font-family: monospace;
     margin: 5px;
 }
@@ -13,22 +13,39 @@ html,body {
     font-weight: bold;
 }
 .subdue {
-    color: #a09c00;
+    color: #706c00;
+}
+h1 {
+    margin-top: 0;
 }
 hr {
+    border: none;
     border-top: 1px solid rgba(255,255,0,.1);
+}
+#links {
+    margin-top: 10px;
+}
+a {
+    color: #bbb600;
+}
+a:hover {
+    color: #fff906;
 }
 </style>
 <title>⚡ Lightning Network Monitor ⚡</title>
 </head>
 <body>
 <div style="float:left; margin-right: 30px">
-<h1 class="emph">⚡ Lightning Network Monitor ⚡</h1>
-<div id="status"><span class="subdue" id="time"></span>: <span class="emph" id="totalnodes">0</span> nodes, <span class="emph" id="totalchannels">0</span> channels, <span class="emph" id="totalcapacity">0</span> BTC total capacity</div>
+<h1>⚡ Lightning Network Monitor ⚡</h1>
+<div id="status"><span class="subdue" id="time">Awaiting data</span>: <span class="emph" id="totalnodes">0</span> nodes, <span class="emph" id="totalchannels">0</span> channels, <span class="emph" id="totalcapacity">0</span> BTC total capacity</div>
 </div>
-<div><a href="https://incoherency.co.uk/">James Stanley</a></div>
+<div id="links">
+<div><a href="https://incoherency.co.uk/">James Stanley</a> - <a href="mailto:jes@jes.xxx">jes@jes.xxx</a></div>
 <div><a href="https://bitcoinvisuals.com/lightning">Bitcoin Visuals Lightning Network Charts</a></div>
 <div><a href="https://www.robtex.com/lightning/">Robtex Bitcoin Lightning</a></div>
+<div><a href="https://lnmainnet.gaben.win/">Recksplorer Lightning Map</a></div>
+</div>
+<div style="clear:both"></div>
 <hr>
 <div id="msgs"></div>
 
@@ -50,8 +67,7 @@ hr {
 
     function add_message(time, text) {
         var t = new Date(time*1000);
-        // TODO: html escape text
-        $('#msgs').html('<span class="subdue">' + strdate(t) + "</span>: " + text + "<br>" + $('#msgs').html());
+        $('#msgs').prepend('<span class="subdue">' + strdate(t) + "</span>: " + text + "<br>");
     }
 
     function node_addr(n) {
@@ -75,6 +91,14 @@ hr {
         return s;
     }
 
+    function nodelink(key) {
+        return "<a target=\"_blank\" href=\"https://www.robtex.com/lightning/node/" + key + "\">" + key + "</a>";
+    }
+
+    function esc(text) {
+        return $('<div/>').text(text).html();
+    }
+
     function connect() {
         var ws = new WebSocket((window.location.protocol == 'http:' ? "ws://" : "wss://") + window.location.hostname + ":" + window.location.port + "/events");
         ws.onmessage = function(e) {
@@ -93,17 +117,17 @@ hr {
 
                 if (Object.keys(oldnode).length == 0) {
                     // node came online
-                    add_message(obj.time, "node " + newnode.pub_key + " (<span class=\"emph\">" + newnode.alias + "</span>) came online at <span class=\"emph\">" + node_addr(newnode) + "</span>");
+                    add_message(obj.time, "node " + nodelink(esc(newnode.pub_key)) + " (<span class=\"emph\">" + esc(newnode.alias) + "</span>) came <span class=\"emph\">online</span> at <span class=\"emph\">" + esc(node_addr(newnode)) + "</span>");
                 } else if (Object.keys(newnode).length == 0) {
                     // node went offline
-                    add_message(obj.time, "node " + oldnode.pub_key + " (<span class=\"emph\">" + oldnode.alias + "</span>) went offline at <span class=\"emph\">" + node_addr(oldnode) + "</span>");
+                    add_message(obj.time, "node " + nodelink(esc(oldnode.pub_key)) + " (<span class=\"emph\">" + esc(oldnode.alias) + "</span>) went <span class=\"emph\">offline</span> at <span class=\"emph\">" + esc(node_addr(oldnode)) + "</span>");
                 } else {
                     if (oldnode.alias != newnode.alias) {
                         // alias changed
-                        add_message(obj.time, "node " + oldnode.pub_key + " renamed from '<span class=\"emph\">" + oldnode.alias + "</span>' to '<span class=\"emph\">" + newnode.alias + "</span>' at <span class=\"emph\">" + node_addr(newnode) + "</span>");
+                        add_message(obj.time, "node " + nodelink(esc(oldnode.pub_key)) + " renamed from '<span class=\"emph\">" + esc(oldnode.alias) + "</span>' to '<span class=\"emph\">" + esc(newnode.alias) + "</span>' at <span class=\"emph\">" + esc(node_addr(newnode)) + "</span>");
                     } else if (node_addr(oldnode) != node_addr(newnode)) {
                         // addresses changed
-                        add_message(obj.time, "node " + oldnode.pub_key + " (<span class=\"emph\">" + newnode.alias + "</span>) stopped announcing <span class=\"emph\">" + node_addr(oldnode) + "</span> and started announcing <span class=\"emph\">" + node_addr(newnode) + "</span>");
+                        add_message(obj.time, "node " + nodelink(esc(oldnode.pub_key)) + " (<span class=\"emph\">" + esc(newnode.alias) + "</span>) stopped announcing <span class=\"emph\">" + esc(node_addr(oldnode)) + "</span> and started announcing <span class=\"emph\">" + esc(node_addr(newnode)) + "</span>");
                     } else {
                         // what else could change?
                         add_message(obj.time, e.data);
@@ -115,10 +139,11 @@ hr {
 
                 if (Object.keys(oldchannel).length == 0) {
                     // channel opened
-                    add_message(obj.time, "<span class=\"emph\">" + newchannel.capacity + "</span> sat channel announced between " + newchannel.node1_pub + " (<span class=\"emph\">" + newchannel.node1.alias + "</span>) and " + newchannel.node2_pub + " (<span class=\"emph\">" + newchannel.node2.alias + "</span>), funded with txid " + newchannel.chan_point.substring(0,64));
+                    var txid = newchannel.chan_point.substring(0,64);
+                    add_message(obj.time, "<span class=\"emph\">" + esc(newchannel.capacity) + "</span> sat channel <span class=\"emph\">announced</span> between " + nodelink(esc(newchannel.node1_pub)) + " (<span class=\"emph\">" + esc(newchannel.node1.alias) + "</span>) and " + nodelink(esc(newchannel.node2_pub)) + " (<span class=\"emph\">" + esc(newchannel.node2.alias) + "</span>), funded with txid <a target=\"_blank\" href=\"https://blockchain.info/tx/" + esc(txid) + "\">" + esc(txid) + "</a>");
                 } else if (Object.keys(newchannel).length == 0) {
                     // channel closed
-                    add_message(obj.time, "<span class=\"emph\">" + oldchannel.capacity + "</span> sat channel disappeared between " + oldchannel.node1_pub + " (<span class=\"emph\">" + oldchannel.node1.alias + "</span>) and " + newchannel.node2_pub + " (<span class=\"emph\">" + oldchannel.node2.alias + "</span>)");
+                    add_message(obj.time, "<span class=\"emph\">" + esc(oldchannel.capacity) + "</span> sat channel <span class=\"emph\">disappeared</span> between " + nodelink(esc(oldchannel.node1_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node1.alias) + "</span>) and " + nodelink(esc(oldchannel.node2_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node2.alias) + "</span>)");
                 } else {
                     // what else could change?
                     console.log(e.data);
