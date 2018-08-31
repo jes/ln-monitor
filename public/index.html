@@ -136,8 +136,8 @@ a:hover {
                         // addresses changed
                         add_message(obj.time, "node " + nodelink(esc(oldnode.pub_key)) + " (<span class=\"emph\">" + esc(newnode.alias) + "</span>) stopped announcing <span class=\"emph\">" + esc(node_addr(oldnode)) + "</span> and started announcing <span class=\"emph\">" + esc(node_addr(newnode)) + "</span>");
                     } else {
-                        // what else could change?
-                        add_message(obj.time, e.data);
+                        // what else could change? just the colour?
+                        console.log(e.data);
                     }
                 }
             } else if (obj.type == 'channel') {
