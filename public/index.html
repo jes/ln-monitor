@@ -156,7 +156,7 @@ a:hover {
                     console.log(e.data);
                 }
             } else if (obj.type == 'block') {
-                add_message(obj.time, "block <a class=\"emph\" href=\"https://blockchain.com/btc/block/" + esc(obj["new"].hash) + "\">" + esc(obj["new"].block) + "</a> was mined");
+                add_message(obj.time, "block <a target=\"_blank\" class=\"emph\" href=\"https://blockchain.com/btc/block/" + esc(obj["new"].hash) + "\">" + esc(obj["new"].block) + "</a> was mined");
             }
         };
         ws.onopen = function() {
