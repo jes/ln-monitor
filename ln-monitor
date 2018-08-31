@@ -60,6 +60,8 @@ sub broadcast {
 }
 
 sub update_state {
+    my @events;
+
     my $newstate = process_state(scalar `lncli describegraph`);
     $newstate->{id} = $oldstate->{id};
     $newstate->{lastevents} = $oldstate->{lastevents}||[];
@@ -72,8 +74,6 @@ sub update_state {
     my %allnodes = map { $_ => 1 } (keys %{ $oldstate->{nodes} }, keys %{ $newstate->{nodes} });
 
     my $totalnodes = keys %allnodes;
-
-    my @events;
 
     for my $node (keys %allnodes) {
         my $old = $oldstate->{nodes}{$node}||{};
