@@ -49,6 +49,8 @@ Mojo::IOLoop->recurring(1 => sub {
 });
 
 # XXX: not thread-safe, only run 1 worker
+app->config(hypnotoad => {listen => ["http://*:9001"], workers => 1});
+
 app->start;
 
 sub broadcast {
