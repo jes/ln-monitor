@@ -93,12 +93,12 @@ sub update_state {
     for my $channel (keys %allchannels) {
         my $old = $oldstate->{channels}{$channel}||{};
         my $new = $newstate->{channels}{$channel}||{};
-        $old->{capacity} ||= 0;
-        $new->{capacity} ||= 0;
+        $old->{capacity} ||= 0 if keys %$old;
+        $new->{capacity} ||= 0 if keys %$new;
 
         $totalcapacity += $new->{capacity};
 
-        if ($new->{capacity} > $largestchannel) {
+        if (keys %new && $new->{capacity} > $largestchannel) {
             $largestchannel = $new->{capacity};
         }
 
