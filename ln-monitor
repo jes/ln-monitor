@@ -98,7 +98,7 @@ sub update_state {
 
         $totalcapacity += $new->{capacity};
 
-        if (keys %new && $new->{capacity} > $largestchannel) {
+        if (keys %$new && $new->{capacity} > $largestchannel) {
             $largestchannel = $new->{capacity};
         }
 
