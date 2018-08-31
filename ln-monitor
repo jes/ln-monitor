@@ -93,6 +93,8 @@ sub update_state {
     for my $channel (keys %allchannels) {
         my $old = $oldstate->{channels}{$channel}||{};
         my $new = $newstate->{channels}{$channel}||{};
+        $old->{capacity} ||= 0;
+        $new->{capacity} ||= 0;
 
         $totalcapacity += $new->{capacity};
 
@@ -137,7 +139,8 @@ sub update_state {
 sub latest_block {
     my $json = `bitcoin-cli getblockchaininfo`;
     my $o = decode_json($json);
-    return {block => $o->{headers}};
+    my $hash = `bitcoin-cli getblockhash $o->{headers}`; # XXX: shell injection
+    return {block => $o->{headers}, hash => $hash};
 }
 
 sub process_state {

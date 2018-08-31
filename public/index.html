@@ -147,7 +147,7 @@ a:hover {
                 if (Object.keys(oldchannel).length == 0) {
                     // channel opened
                     var txid = newchannel.chan_point.substring(0,64);
-                    add_message(obj.time, "<span class=\"emph\">" + esc(newchannel.capacity) + "</span> sat channel <span class=\"emph\">announced</span> between " + nodelink(esc(newchannel.node1_pub)) + " (<span class=\"emph\">" + esc(newchannel.node1.alias) + "</span>) and " + nodelink(esc(newchannel.node2_pub)) + " (<span class=\"emph\">" + esc(newchannel.node2.alias) + "</span>), funded with txid <a target=\"_blank\" href=\"https://blockchain.info/tx/" + esc(txid) + "\">" + shorten(esc(txid)) + "</a>");
+                    add_message(obj.time, "<span class=\"emph\">" + esc(newchannel.capacity) + "</span> sat channel <span class=\"emph\">announced</span> between " + nodelink(esc(newchannel.node1_pub)) + " (<span class=\"emph\">" + esc(newchannel.node1.alias) + "</span>) and " + nodelink(esc(newchannel.node2_pub)) + " (<span class=\"emph\">" + esc(newchannel.node2.alias) + "</span>), funded with txid <a target=\"_blank\" href=\"https://blockchain.com/tx/" + esc(txid) + "\">" + shorten(esc(txid)) + "</a>");
                 } else if (Object.keys(newchannel).length == 0) {
                     // channel closed
                     add_message(obj.time, "<span class=\"emph\">" + esc(oldchannel.capacity) + "</span> sat channel <span class=\"emph\">disappeared</span> between " + nodelink(esc(oldchannel.node1_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node1.alias) + "</span>) and " + nodelink(esc(oldchannel.node2_pub)) + " (<span class=\"emph\">" + esc(oldchannel.node2.alias) + "</span>)");
@@ -156,7 +156,7 @@ a:hover {
                     console.log(e.data);
                 }
             } else if (obj.type == 'block') {
-                add_message(obj.time, "block <span class=\"emph\">" + esc(obj["new"].block) + "</span> was mined");
+                add_message(obj.time, "block <a class=\"emph\" href=\"https://blockchain.com/btc/block/" + esc(obj["new"].hash) + "\">" + esc(obj["new"].block) + "</a> was mined");
             }
         };
         ws.onopen = function() {
