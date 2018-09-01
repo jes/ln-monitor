@@ -54,6 +54,7 @@ a:hover {
 <script src="js/jquery-3.3.1.min.js" type="text/javascript"></script>
 <script type="text/javascript">
     var lastseenid = 0;
+    var bestblock = 0;
 
     function pad(x, N) {
         var s = x + "";
@@ -156,7 +157,11 @@ a:hover {
                     console.log(e.data);
                 }
             } else if (obj.type == 'block') {
-                add_message(obj.time, "block <a target=\"_blank\" class=\"emph\" href=\"https://blockchain.com/btc/block/" + esc(obj["new"].hash) + "\">" + esc(obj["new"].block) + "</a> was mined");
+                var b = obj["new"].block;
+                if (b > bestblock) {
+                    bestblock = b;
+                    add_message(obj.time, "block <a target=\"_blank\" class=\"emph\" href=\"https://blockchain.com/btc/block/" + esc(obj["new"].hash) + "\">" + esc(b) + "</a> was mined");
+                }
             }
         };
         ws.onopen = function() {
